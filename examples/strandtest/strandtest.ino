@@ -12,8 +12,8 @@
 int nLEDs = 32;
 
 // Chose 2 pins for output; can be any valid output pins:
-int dataPin  = 12;
-int clockPin = 10;
+int dataPin  = 2;
+int clockPin = 3;
 
 // First parameter is the number of LEDs in the strand.  The LED strips
 // are 32 LEDs per meter but you can extend or cut the strip.  Next two
