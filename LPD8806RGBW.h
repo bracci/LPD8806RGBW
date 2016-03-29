@@ -26,7 +26,7 @@ class LPD8806RGBW {
   uint16_t
     numPixels(void);
   uint32_t
-    Color(byte r, byte g, byte b, byte w = 0),
+    Color(byte r, byte b, byte g, byte w = 0),
     getPixelColor(uint16_t n);
 
  private:

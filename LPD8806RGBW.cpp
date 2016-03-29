@@ -203,7 +203,7 @@ void LPD8806RGBW::startSPI(void) {
 #endif
 
   // Issue initial latch/reset to strip:
-  for(uint16_t i=((numLEDs + 15)/16); i>0; i--) spi_out(0);
+  for(uint16_t i=((numLEDs * 2+ 31)/32); i>0; i--) spi_out(0);
 }
 
 // Enable software SPI pins and issue initial latch:
@@ -212,13 +212,13 @@ void LPD8806RGBW::startBitbang() {
   pinMode(clkpin , OUTPUT);
 #ifdef __AVR__
   *dataport &= ~datapinmask; // Data is held low throughout (latch = 0)
-  for(uint16_t i=((numLEDs +15)/16)*8; i>0; i--) {
+  for(uint16_t i=((numLEDs * 2+31)/32)*8; i>0; i--) {
     *clkport |=  clkpinmask;
     *clkport &= ~clkpinmask;
   }
 #else
   digitalWrite(datapin, LOW);
-  for(uint16_t i=((numLEDs +15)/16)*8; i>0; i--) {
+  for(uint16_t i=((numLEDs * 2+31)/32)*8; i>0; i--) {
     digitalWrite(clkpin, HIGH);
     digitalWrite(clkpin, LOW);
   }
@@ -234,7 +234,7 @@ void LPD8806RGBW::updateLength(uint16_t n) {
   if(pixels) free(pixels); // Free existing data (if any)
 
   dataBytes  = n * 2 * 3;
-  latchBytes = (n + 15) / 16;
+  latchBytes = (n * 2+ 31) / 32;
   totalBytes = dataBytes + latchBytes;
   if((pixels = (uint8_t *)malloc(totalBytes))) { // Alloc new data
     numLEDs  = n;
@@ -281,7 +281,7 @@ void LPD8806RGBW::show(void) {
 }
 
 // Convert separate R,G,B,W into combined 32-bit WBGR color:
-uint32_t LPD8806RGBW::Color(byte r, byte g, byte b, byte w) {
+uint32_t LPD8806RGBW::Color(byte r, byte b, byte g, byte w) {
   return ((uint32_t)(w | 0x80) << 24) |
 		 ((uint32_t)(b | 0x80) << 16) |
          ((uint32_t)(g | 0x80) <<  8) |
