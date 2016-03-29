@@ -3,7 +3,7 @@ Arduino library to control LPD8806-based RGB LED Strips
 Copyright (C) Adafruit Industries
 MIT license
 
-Clearing up some misconceptions about how the LPD8806RGBW drivers work:
+Clearing up some misconceptions about how the LPD8806 drivers work:
 
 The LPD8806 is not a FIFO shift register.  The first data out controls the
 LED *closest* to the processor (unlike a typical shift register, where the
@@ -19,7 +19,7 @@ The rest gets bizarre...
 
 The LPD8806 does not perform an in-unison latch (which would display the
 newly-transmitted data all at once).  Rather, each individual byte (even
-the separate G, R, B, W components of each LED) is latched AS IT ARRIVES...
+the separate G, R, B components of each LED) is latched AS IT ARRIVES...
 or more accurately, as the first bit of the subsequent byte arrives and
 is passed through.  So the strip actually refreshes at the speed the data
 is issued, not instantaneously (this can be observed by greatly reducing
@@ -203,7 +203,7 @@ void LPD8806RGBW::startSPI(void) {
 #endif
 
   // Issue initial latch/reset to strip:
-  for(uint16_t i=((numLEDs * 2+ 31)/32); i>0; i--) spi_out(0);
+  for(uint16_t i=((numLEDs * 2 +31)/32); i>0; i--) spi_out(0);
 }
 
 // Enable software SPI pins and issue initial latch:
@@ -212,13 +212,13 @@ void LPD8806RGBW::startBitbang() {
   pinMode(clkpin , OUTPUT);
 #ifdef __AVR__
   *dataport &= ~datapinmask; // Data is held low throughout (latch = 0)
-  for(uint16_t i=((numLEDs * 2+31)/32)*8; i>0; i--) {
+  for(uint16_t i=((numLEDs * 2 +31)/32)*8; i>0; i--) {
     *clkport |=  clkpinmask;
     *clkport &= ~clkpinmask;
   }
 #else
   digitalWrite(datapin, LOW);
-  for(uint16_t i=((numLEDs * 2+31)/32)*8; i>0; i--) {
+  for(uint16_t i=((numLEDs * 2 +31)/32)*8; i>0; i--) {
     digitalWrite(clkpin, HIGH);
     digitalWrite(clkpin, LOW);
   }
@@ -228,19 +228,18 @@ void LPD8806RGBW::startBitbang() {
 // Change strip length (see notes with empty constructor, above):
 void LPD8806RGBW::updateLength(uint16_t n) {
   uint8_t  latchBytes;
-  uint16_t dataBytes, totalBytes;
+  uint16_t dataBytes;
 
   numLEDs = numBytes = 0;
   if(pixels) free(pixels); // Free existing data (if any)
 
-  dataBytes  = n * 2 * 3;
-  latchBytes = (n * 2+ 31) / 32;
-  totalBytes = dataBytes + latchBytes;
-  if((pixels = (uint8_t *)malloc(totalBytes))) { // Alloc new data
+  dataBytes  = n * 3;
+  latchBytes = (n * 2 + 31) / 32;
+  if((pixels = (uint8_t *)malloc(dataBytes))) { // Alloc new data
     numLEDs  = n;
-    numBytes = totalBytes;
+    numBytes = dataBytes;
+	numLatchBytes = latchBytes;
     memset( pixels           , 0x80, dataBytes);  // Init to RGB 'off' state
-    memset(&pixels[dataBytes], 0   , latchBytes); // Clear latch bytes
   }
   // 'begun' state does not change -- pins retain prior modes
 }
@@ -251,73 +250,88 @@ uint16_t LPD8806RGBW::numPixels(void) {
 
 void LPD8806RGBW::show(void) {
   uint8_t  *ptr = pixels;
-  uint16_t i    = numBytes;
+  uint16_t i    = numLEDs;
 
   // This doesn't need to distinguish among individual pixel color
   // bytes vs. latch data, etc.  Everything is laid out in one big
   // flat buffer and issued the same regardless of purpose.
-  if(hardwareSPI) {
-    while(i--) spi_out(*ptr++);
-  } else {
-    uint8_t p, bit;
+    while(i--){
+		if((ptr[0] == ptr[1]) && (ptr[1] == ptr[2])){
+			writeOut(ptr[2]);
+			for(uint8_t j = 0; j<5; j++)
+				writeOut(0x80);
+		}
+		else
+		{
+			writeOut(0x80);
+			writeOut(ptr[0]);
+			writeOut(ptr[2]);
+			writeOut(ptr[1]);
+			writeOut(0x80);
+			writeOut(0x80);
+		}
+		ptr += 3;
+	} 
+	i = numLatchBytes;
+	while(i--) writeOut(0x00);
+}
 
-    while(i--) {
-      p = *ptr++;
+void LPD8806RGBW::writeOut(uint8_t colorContent){
+	if(hardwareSPI){
+		spi_out(colorContent);
+	}
+	else{
+      uint8_t bit;
       for(bit=0x80; bit; bit >>= 1) {
 #ifdef __AVR__
-	  if(p & bit) *dataport |=  datapinmask;
+	  if(colorContent & bit) *dataport |=  datapinmask;
 	  else        *dataport &= ~datapinmask;
 	  *clkport |=  clkpinmask;
 	  *clkport &= ~clkpinmask;
 #else
-	  if(p & bit) digitalWrite(datapin, HIGH);
+	  if(colorContent & bit) digitalWrite(datapin, HIGH);
 	  else        digitalWrite(datapin, LOW);
 	  digitalWrite(clkpin, HIGH);
 	  digitalWrite(clkpin, LOW);
 #endif
       }
-    }
-  }
+	}
 }
 
-// Convert separate R,G,B,W into combined 32-bit WBGR color:
-uint32_t LPD8806RGBW::Color(byte r, byte b, byte g, byte w) {
-  return ((uint32_t)(w | 0x80) << 24) |
-		 ((uint32_t)(b | 0x80) << 16) |
-         ((uint32_t)(g | 0x80) <<  8) |
-                     r | 0x80 ;
+// Convert separate R,G,B into combined 32-bit GRB color:
+uint32_t LPD8806RGBW::Color(byte r, byte g, byte b) {
+  return ((uint32_t)(g | 0x80) << 16) |
+         ((uint32_t)(r | 0x80) <<  8) |
+                     b | 0x80 ;
 }
 
-// Set pixel color from separate 7-bit R, G, B, W components:
-void LPD8806RGBW::setPixelColor(uint16_t n, uint8_t r, uint8_t g, uint8_t b, uint8_t w) {
+// Set pixel color from separate 7-bit R, G, B components:
+void LPD8806RGBW::setPixelColor(uint16_t n, uint8_t r, uint8_t g, uint8_t b) {
   if(n < numLEDs) { // Arrays are 0-indexed, thus NOT '<='
-    uint8_t *p = &pixels[n * 2 * 3];
-    *p++ = w | 0x80; // Strip color order is WBGR,
-    *p++ = b | 0x80; // not the more common RGBW,
-    *p++ = g | 0x80; // so the order here is intentional; don't "fix"
-	*p++ = r | 0x80;
+    uint8_t *p = &pixels[n * 3];
+    *p++ = g | 0x80; // Strip color order is GRB,
+    *p++ = r | 0x80; // not the more common RGB,
+    *p++ = b | 0x80; // so the order here is intentional; don't "fix"
   }
 }
 
-// Set pixel color from 'packed' 32-bit WBGR (not RGBW) value:
+// Set pixel color from 'packed' 32-bit GRB (not RGB) value:
 void LPD8806RGBW::setPixelColor(uint16_t n, uint32_t c) {
   if(n < numLEDs) { // Arrays are 0-indexed, thus NOT '<='
-    uint8_t *p = &pixels[n * 2 * 3];
-	*p++ = (c >> 24) | 0x80; // W
-    *p++ = (c >> 16) | 0x80; // B
-    *p++ = (c >> 8)  | 0x80; // G
-	*p++ =  c 	     | 0x80; // R
+    uint8_t *p = &pixels[n * 3];
+    *p++ = (c >> 16) | 0x80;
+    *p++ = (c >>  8) | 0x80;
+    *p++ =  c        | 0x80;
   }
 }
 
-// Query color from previously-set pixel (returns packed 32-bit WBGR value)
+// Query color from previously-set pixel (returns packed 32-bit GRB value)
 uint32_t LPD8806RGBW::getPixelColor(uint16_t n) {
   if(n < numLEDs) {
-    uint16_t ofs = n * 2 * 3;
-    return ((uint32_t)(pixels[ofs + 0] & 0x7f) << 24) |
-		   ((uint32_t)(pixels[ofs + 1] & 0x7f) << 16) |
-           ((uint32_t)(pixels[ofs + 2] & 0x7f) <<  8) |
-            (uint32_t)(pixels[ofs + 3] & 0x7f);
+    uint16_t ofs = n * 3;
+    return ((uint32_t)(pixels[ofs    ] & 0x7f) << 16) |
+           ((uint32_t)(pixels[ofs + 1] & 0x7f) <<  8) |
+            (uint32_t)(pixels[ofs + 2] & 0x7f);
   }
 
   return 0; // Pixel # is out of bounds
