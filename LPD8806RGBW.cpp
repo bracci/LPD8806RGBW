@@ -251,25 +251,21 @@ uint16_t LPD8806RGBW::numPixels(void) {
 void LPD8806RGBW::show(void) {
   uint8_t  *ptr = pixels;
   uint16_t i    = numLEDs;
+  uint8_t whitePart;
 
   // This doesn't need to distinguish among individual pixel color
   // bytes vs. latch data, etc.  Everything is laid out in one big
   // flat buffer and issued the same regardless of purpose.
     while(i--){
-		if((ptr[0] == ptr[1]) && (ptr[1] == ptr[2])){
-			writeOut(ptr[2]);
-			for(uint8_t j = 0; j<5; j++)
-				writeOut(0x80);
-		}
-		else
-		{
-			writeOut(0x80);
-			writeOut(ptr[0]);
-			writeOut(ptr[2]);
-			writeOut(ptr[1]);
-			writeOut(0x80);
-			writeOut(0x80);
-		}
+		whitePart = (ptr[0] < ptr[1] && ptr[0] < ptr[2]) ? ptr[0] : (ptr[1] < ptr[2]) ? ptr[1] : ptr[2];
+
+		writeOut(whitePart);
+		writeOut(ptr[0] - (whitePart & ~(0x80)));
+		writeOut(ptr[2] - (whitePart & ~(0x80)));
+		writeOut(ptr[1] - (whitePart & ~(0x80)));
+		writeOut(0x80);
+		writeOut(0x80);
+
 		ptr += 3;
 	} 
 	i = numLatchBytes;
