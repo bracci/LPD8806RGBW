@@ -44,22 +44,22 @@ void setup() {
 void loop() {
 
   // Send a simple pixel chase in...
-  colorChase(strip.Color(0  ,   0,   0, 127), 50); // White
-  colorChase(strip.Color(127,   0,   0,   0), 50); // Red
-  colorChase(strip.Color(127, 127,   0,   0), 50); // Yellow
-  colorChase(strip.Color(  0, 127,   0,   0), 50); // Green
-  colorChase(strip.Color(  0, 127, 127,   0), 50); // Cyan
-  colorChase(strip.Color(  0,   0, 127,   0), 50); // Blue
-  colorChase(strip.Color(127,   0, 127,   0), 50); // Violet
+  colorChase(strip.Color(127, 127, 127), 50); // White
+  colorChase(strip.Color(127,   0,   0), 50); // Red
+  colorChase(strip.Color(127, 127,   0), 50); // Yellow
+  colorChase(strip.Color(  0, 127,   0), 50); // Green
+  colorChase(strip.Color(  0, 127, 127), 50); // Cyan
+  colorChase(strip.Color(  0,   0, 127), 50); // Blue
+  colorChase(strip.Color(127,   0, 127), 50); // Violet
 
   // Send a theater pixel chase in...
-  theaterChase(strip.Color(  0,   0,   0, 127), 50); // White
-  theaterChase(strip.Color(127,   0,   0,   0), 50); // Red
-  theaterChase(strip.Color(127, 127,   0,   0), 50); // Yellow
-  theaterChase(strip.Color(  0, 127,   0,   0), 50); // Green
-  theaterChase(strip.Color(  0, 127, 127,   0), 50); // Cyan
-  theaterChase(strip.Color(  0,   0, 127,   0), 50); // Blue
-  theaterChase(strip.Color(127,   0, 127,   0), 50); // Violet
+  theaterChase(strip.Color(127, 127, 127), 50); // White
+  theaterChase(strip.Color(127,   0,   0), 50); // Red
+  theaterChase(strip.Color(127, 127,   0), 50); // Yellow
+  theaterChase(strip.Color(  0, 127,   0), 50); // Green
+  theaterChase(strip.Color(  0, 127, 127), 50); // Cyan
+  theaterChase(strip.Color(  0,   0, 127), 50); // Blue
+  theaterChase(strip.Color(127,   0, 127), 50); // Violet
 
   // Fill the entire strip with...
   colorWipe(strip.Color(127,   0,   0), 50);  // Red

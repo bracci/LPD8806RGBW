@@ -1,4 +1,4 @@
-#include "LPD8806.h"
+#include "LPD8806RGBW.h"
 #include "SPI.h"
 
 // Example to control LPD8806-based RGB LED Modules in a strip!
@@ -18,7 +18,7 @@ int clockPin = 15;
 
 // Set the first variable to the NUMBER of pixels. 32 = 32 pixels in a row
 // The LED strips are 32 LEDs per meter but you can extend/cut the strip
-LPD8806 strip = LPD8806(32, dataPin, clockPin);
+LPD8806RGBW strip = LPD8806RGBW(32, dataPin, clockPin);
 
 void setup() {
   // Start up the LED strip
